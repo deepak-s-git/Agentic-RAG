@@ -167,3 +167,71 @@ def ask_ai(prompt, api_key):
         messages=[{"role": "user", "content": prompt}]
     )
     return completion.choices[0].message.content
+
+# RAG pipeline: retrieve → decide → answer
+def answer_question(question, client, collection_name, api_key, top_k=3):
+
+    if not question.strip():
+        st.warning("Enter a question.")
+        return
+
+    # Vector search
+    def search(text: str):
+        query_embedding = get_embeddings(text)[0]
+        return client.search(collection_name=collection_name, query_vector=query_embedding, limit=top_k)
+
+    # Format retrieved chunks
+    def format_docs(docs):
+        formatted = []
+        for doc in docs:
+            if doc.payload["metadata"]["source"] == "pdf_dataset":
+                src = f"\nSource: PDF {doc.payload['metadata']['filename']}"
+            else:
+                src = f"\nSource: Web {doc.payload['metadata']['url']}"
+            formatted.append(doc.payload["content"] + src)
+        return "\n\n".join(formatted)
+
+    results = search(question)
+    context = format_docs(results)
+
+    # Agent decision step
+    decision_prompt = f"""
+Return 1 if answer exists in context, else 0.
+
+Context:
+{context}
+
+Question:
+{question}
+"""
+
+    decision = ask_ai(decision_prompt, api_key).strip()
+
+    # If found → answer from context
+    if decision == "1":
+        final_prompt = f"""
+Answer using ONLY this context:
+
+{context}
+
+Question:
+{question}
+"""
+        answer = ask_ai(final_prompt, api_key)
+        st.markdown(answer)
+
+    # Else → fallback search
+    else:
+        results = DDGS().text(question, max_results=5)
+        online_context = "\n\n".join(doc["body"] for doc in results)
+
+        final_prompt = f"""
+Answer using this context:
+
+{online_context}
+
+Question:
+{question}
+"""
+        answer = ask_ai(final_prompt, api_key)
+        st.markdown(answer)
