@@ -128,3 +128,33 @@ def process_and_index_documents(uploaded_files, web_urls=None, chunk_size=500, c
     # Generate embeddings
     with st.spinner("Generating embeddings..."):
         embeddings = get_embeddings(all_chunks)
+
+    # Store in Qdrant vector DB
+    client = QdrantClient("http://localhost:6333")
+    collection_name = "agent_rag_index"
+    VECTOR_SIZE = 384
+
+    with st.spinner("Creating vector database..."):
+        try:
+            client.delete_collection(collection_name)
+        except:
+            pass
+
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
+        )
+
+        ids = list(range(len(all_chunks)))
+        payload = [{"content": chunk, "metadata": metadata} for chunk, metadata in zip(all_chunks, doc_metadata)]
+
+        client.upload_collection(
+            collection_name=collection_name,
+            vectors=embeddings,
+            payload=payload,
+            ids=ids,
+            batch_size=256,
+        )
+
+    st.success(f"Indexed {len(all_chunks)} chunks successfully!")
+    return client, collection_name
