@@ -11,3 +11,12 @@ from urllib.parse import urljoin, urlparse
 from sentence_transformers import SentenceTransformer  # local embeddings
 from openai import OpenAI  # OpenRouter-compatible client
 import time
+
+# Streamlit session state initialization
+if "client" not in st.session_state:
+    st.session_state.client = None
+if "collection_name" not in st.session_state:
+    st.session_state.collection_name = None
+
+# Load embedding model
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
