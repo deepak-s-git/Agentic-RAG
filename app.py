@@ -55,3 +55,19 @@ def get_embeddings(texts):
         texts = [texts]
     embeddings = embedding_model.encode(texts)
     return embeddings.tolist()
+
+# Extract text from uploaded PDFs
+def process_uploaded_pdfs(uploaded_files):
+    pdf_list = []
+    for uploaded_file in uploaded_files:
+        content = ""
+        try:
+            reader = PyPDF2.PdfReader(uploaded_file)
+            for page in reader.pages:
+                extracted = page.extract_text()
+                if extracted:
+                    content += extracted
+            pdf_list.append({"content": content, "filename": uploaded_file.name})
+        except Exception as e:
+            st.error(f"Error processing {uploaded_file.name}: {str(e)}")
+    return pdf_list
