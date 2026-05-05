@@ -71,3 +71,60 @@ def process_uploaded_pdfs(uploaded_files):
         except Exception as e:
             st.error(f"Error processing {uploaded_file.name}: {str(e)}")
     return pdf_list
+
+
+# Main pipeline: chunk, embed, and store in Qdrant
+def process_and_index_documents(uploaded_files, web_urls=None, chunk_size=500, crawl_website=False):
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=50)
+    all_chunks = []
+    doc_metadata = []
+
+    # Process PDFs
+    if uploaded_files:
+        all_documents = process_uploaded_pdfs(uploaded_files)
+        for doc in all_documents:
+            chunks = text_splitter.split_text(doc["content"])
+            all_chunks.extend(chunks)
+            for _ in chunks:
+                doc_metadata.append({"filename": doc["filename"], "source": "pdf_dataset"})
+
+    # Process websites
+    if web_urls:
+        urls = [url.strip() for url in web_urls.split(",")]
+
+        if crawl_website:
+            all_urls = set()
+            progress_bar = st.progress(0)
+            progress_text = st.empty()
+            for i, base_url in enumerate(urls):
+                progress_text.text(f"Crawling website: {base_url}")
+                site_urls = get_all_urls(base_url)
+                all_urls.update(site_urls)
+                progress_bar.progress((i + 1) / len(urls))
+            urls = list(all_urls)
+            progress_text.text(f"Found {len(urls)} unique URLs")
+
+        progress_bar = st.progress(0)
+        progress_text = st.empty()
+
+        for i, url in enumerate(urls):
+            progress_text.text(f"Processing URL {i+1}/{len(urls)}: {url}")
+            content = fetch_url_content(url)
+            if content is not None:
+                chunks = text_splitter.split_text(content)
+                all_chunks.extend(chunks)
+                for _ in chunks:
+                    doc_metadata.append({"url": url, "source": "web_content"})
+            progress_bar.progress((i + 1) / len(urls))
+            time.sleep(0.5)
+
+        progress_text.empty()
+        progress_bar.empty()
+
+    if not all_chunks:
+        st.error("No content to process.")
+        return None, None
+
+    # Generate embeddings
+    with st.spinner("Generating embeddings..."):
+        embeddings = get_embeddings(all_chunks)
