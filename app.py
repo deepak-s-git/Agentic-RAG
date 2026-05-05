@@ -21,6 +21,24 @@ if "collection_name" not in st.session_state:
 # Load embedding model
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
+# Crawl and collect internal URLs from a website
+def get_all_urls(base_url):
+    urls = set()
+    try:
+        response = requests.get(base_url)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+            for link in soup.find_all("a", href=True):
+                url = link["href"]
+                full_url = urljoin(base_url, url)
+                parsed_url = urlparse(full_url)
+                if parsed_url.netloc == urlparse(base_url).netloc:
+                    clean_url = parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path
+                    urls.add(clean_url)
+    except Exception as e:
+        st.error(f"An error occurred while crawling {base_url}: {e}")
+    return urls
+
 # Extract clean text from a webpage
 def extract_text_from_url(url):
     try:
