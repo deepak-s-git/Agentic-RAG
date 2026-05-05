@@ -187,7 +187,7 @@ def ask_ai(prompt, api_key):
     return completion.choices[0].message.content
 
 # RAG pipeline: retrieve → decide → answer
-def answer_question(question, client, collection_name, api_key, top_k=3):
+def answer_question(question, client, collection_name, api_key, top_k=5):
 
     if not question.strip():
         st.warning("Enter a question.")
@@ -196,7 +196,11 @@ def answer_question(question, client, collection_name, api_key, top_k=3):
     # Vector search
     def search(text: str):
         query_embedding = get_embeddings(text)[0]
-        return client.search(collection_name=collection_name, query_vector=query_embedding, limit=top_k)
+        return client.search(
+            collection_name=collection_name,
+            query_vector=query_embedding,
+            limit=top_k,
+        )
 
     # Format retrieved chunks
     def format_docs(docs):
@@ -212,9 +216,15 @@ def answer_question(question, client, collection_name, api_key, top_k=3):
     results = search(question)
     context = format_docs(results)
 
-    # Agent decision step
+    # DEBUG (optional - remove later)
+    # st.write(context)
+
+    # Agent decision step (FIXED)
     decision_prompt = f"""
-Return 1 if answer exists in context, else 0.
+Return ONLY 1 or 0.
+
+1 = answer exists in context  
+0 = answer does NOT exist  
 
 Context:
 {context}
@@ -223,13 +233,19 @@ Question:
 {question}
 """
 
-    decision = ask_ai(decision_prompt, api_key).strip()
+    decision_raw = ask_ai(decision_prompt, api_key)
+    decision = "1" if "1" in decision_raw else "0"
 
     # If found → answer from context
     if decision == "1":
-        final_prompt = f"""
-Answer using ONLY this context:
+        st.info("Answer found in your documents")
 
+        final_prompt = f"""
+Answer ONLY using the context below.
+
+If answer not clearly present, say "I don't know."
+
+Context:
 {context}
 
 Question:
@@ -238,21 +254,29 @@ Question:
         answer = ask_ai(final_prompt, api_key)
         st.markdown(answer)
 
-    # Else → fallback search
+    # Else → fallback (SAFE)
     else:
-        results = DDGS().text(question, max_results=5)
-        online_context = "\n\n".join(doc["body"] for doc in results)
+        st.info("Not found in documents → searching online...")
 
-        final_prompt = f"""
-Answer using this context:
+        try:
+            time.sleep(2)  # avoid rate limit
+            results = DDGS().text(question, max_results=5)
+            online_context = "\n\n".join(doc["body"] for doc in results)
 
+            final_prompt = f"""
+Answer using the context below.
+
+Context:
 {online_context}
 
 Question:
 {question}
 """
-        answer = ask_ai(final_prompt, api_key)
-        st.markdown(answer)
+            answer = ask_ai(final_prompt, api_key)
+            st.markdown(answer)
+
+        except Exception:
+            st.warning("Search rate-limited. Try again in a few seconds.")
 
 
 # ---------------- UI ----------------
