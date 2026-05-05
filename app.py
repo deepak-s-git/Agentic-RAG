@@ -158,3 +158,12 @@ def process_and_index_documents(uploaded_files, web_urls=None, chunk_size=500, c
 
     st.success(f"Indexed {len(all_chunks)} chunks successfully!")
     return client, collection_name
+
+# Call OpenRouter model for response generation
+def ask_ai(prompt, api_key):
+    client = OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
+    completion = client.chat.completions.create(
+        model="google/gemma-3-27b-it:free",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return completion.choices[0].message.content
