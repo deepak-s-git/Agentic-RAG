@@ -169,16 +169,3 @@ Enter the key in the application UI.
 * Source citation display
 * Deployment to cloud platforms
 * Integration with production-grade search APIs
-
----
-
-## Author
-
-Deepak S
-BTech Computer Science Engineering
-
----
-
-## Support
-
-If you find this project useful, consider starring the repository.
