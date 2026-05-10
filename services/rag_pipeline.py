@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import re
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from duckduckgo_search import DDGS
 from sentence_transformers import SentenceTransformer
@@ -12,14 +13,47 @@ from utils.prompts import DECISION_PROMPT, FINAL_PROMPT_DOCS, FINAL_PROMPT_WEB
 # Load embedding model globally to avoid reloading
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
+def clean_query_for_retrieval(query: str) -> str:
+    # Remove phrases that shouldn't affect semantic search
+    patterns_to_remove = [
+        r"(?i)\bin\s+\d+\s+words\b",
+        r"(?i)\baround\s+\d+\s+words\b",
+        r"(?i)\bfor\s+\d+\s+marks\b",
+        r"(?i)\bbriefly\b",
+        r"(?i)\bin\s+detail\b",
+        r"(?i)\bwith\s+headings\b",
+        r"(?i)\bwith\s+subheadings\b",
+        r"(?i)\bwith\s+proper\s+subheadings\b",
+        r"(?i)\bexplain\s+clearly\b",
+        r"(?i)\bwith\s+examples\b",
+        r"(?i)\bstep-by-step\b",
+        r"(?i)\belaborate\b",
+        r"(?i)\bsummarize\b",
+        r"(?i)\bkey\s+points\b",
+        r"(?i)\band\s+key\s+points\b",
+        r"(?i)\bbullet\s+points\b",
+        r"(?i)\btable\s+format\b",
+    ]
+    
+    cleaned_query = query
+    for pattern in patterns_to_remove:
+        cleaned_query = re.sub(pattern, "", cleaned_query)
+        
+    cleaned_query = re.sub(r"\s+", " ", cleaned_query).strip()
+    return cleaned_query if cleaned_query else query
+
 def get_embeddings(texts):
     if isinstance(texts, str):
         texts = [texts]
     embeddings = embedding_model.encode(texts)
     return embeddings.tolist()
 
-def process_and_index_documents(uploaded_files, web_urls=None, chunk_size=500, crawl_website=False):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=50)
+def process_and_index_documents(uploaded_files, web_urls=None, chunk_size=1000, crawl_website=False):
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size, 
+        chunk_overlap=200,
+        separators=["\n\n", "\n", " ", ""]
+    )
     all_chunks = []
     doc_metadata = []
 
@@ -80,7 +114,7 @@ def process_and_index_documents(uploaded_files, web_urls=None, chunk_size=500, c
     st.success(f"Indexed {len(all_chunks)} chunks successfully!")
     return client, collection_name
 
-def answer_question(question, client, collection_name, api_key, top_k=5, source_type="pdf"):
+def answer_question(question, client, collection_name, api_key, top_k=8, source_type="pdf"):
     if not question.strip():
         st.warning("Enter a question.")
         return
@@ -97,7 +131,8 @@ def answer_question(question, client, collection_name, api_key, top_k=5, source_
         return "\n\n".join(formatted)
 
     # Vector search
-    query_embedding = get_embeddings(question)[0]
+    retrieval_query = clean_query_for_retrieval(question)
+    query_embedding = get_embeddings(retrieval_query)[0]
     results = search_vector_store(client, collection_name, query_embedding, top_k)
     context = format_docs(results)
 
