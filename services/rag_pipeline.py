@@ -80,7 +80,7 @@ def process_and_index_documents(uploaded_files, web_urls=None, chunk_size=500, c
     st.success(f"Indexed {len(all_chunks)} chunks successfully!")
     return client, collection_name
 
-def answer_question(question, client, collection_name, api_key, top_k=5):
+def answer_question(question, client, collection_name, api_key, top_k=5, source_type="pdf"):
     if not question.strip():
         st.warning("Enter a question.")
         return
@@ -108,7 +108,12 @@ def answer_question(question, client, collection_name, api_key, top_k=5):
 
     # If found → answer from context
     if decision == "1":
-        st.info("Answer found in your documents")
+        if source_type == "both":
+            st.info("Answer found in your sources")
+        elif source_type == "web":
+            st.info("Answer found from website content")
+        else:
+            st.info("Answer found in your documents")
         final_prompt = FINAL_PROMPT_DOCS.format(context=context, question=question)
         answer = ask_ai(final_prompt, api_key)
         st.markdown(answer)
