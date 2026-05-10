@@ -12,9 +12,14 @@ Question:
 """
 
 FINAL_PROMPT_DOCS = """
-Answer ONLY using the context below.
+You are an expert technical assistant. Answer the question using ONLY the provided context.
 
-If answer not clearly present, say "I don't know."
+Follow these strict formatting rules:
+- Provide a clear, readable introduction.
+- Use bullet points or numbered lists if the answer involves multiple steps, advantages, or components.
+- Use Markdown headings (##) for different sections if the answer is long.
+- Do NOT output a single giant block of text. Use spacing.
+- If the context does not contain the answer, say exactly "I don't know."
 
 Context:
 {context}
@@ -24,7 +29,13 @@ Question:
 """
 
 FINAL_PROMPT_WEB = """
-Answer using the context below.
+You are an expert technical assistant. Answer the question using the online search results below.
+
+Follow these strict formatting rules:
+- Provide a clear, readable introduction.
+- Use bullet points or numbered lists if the answer involves multiple steps, advantages, or components.
+- Use Markdown headings (##) for different sections if the answer is long.
+- Do NOT output a single giant block of text. Use spacing.
 
 Context:
 {context}
