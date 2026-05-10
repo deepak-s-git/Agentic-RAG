@@ -6,20 +6,29 @@ An Agentic Retrieval-Augmented Generation (RAG) system that answers questions us
 
 ## Features
 
+* Premium, minimalist modern UI (ChatGPT-style aesthetic)
+* Clean web scraping and extraction (ignores noisy HTML elements like navs/footers)
+* Optimized semantic chunking strategy explicitly designed for technical documentation
+* Advanced Query Preprocessing (Regex-based formatting strip for pure semantic retrieval)
 * PDF-based question answering
 * Website content extraction and processing
 * Agent-based decision logic for source selection
 * Semantic search using Qdrant vector database
 * Local embeddings using SentenceTransformers
 * Fallback search using DuckDuckGo
-* Context-grounded responses to minimize hallucination
+* Context-grounded, heavily structured, and dynamically formatted responses to minimize hallucination
+* Modular, scalable software architecture
 
 ---
 
 ## System Architecture
 
-```
-User Query → Vector Search (Qdrant) → Context Retrieved → LLM Decision  
+```text
+User Query 
+   ↓
+Query Preprocessing (Regex formatting strip)
+   ↓
+Vector Search (Qdrant) → Context Retrieved → LLM Decision  
         ↓                              ↓  
      Found                        Not Found  
         ↓                              ↓  
@@ -139,10 +148,11 @@ Enter the key in the application UI.
 
 ## Usage
 
-1. Enter API key
-2. Upload PDF files or provide website URLs
-3. Click "Process Documents"
-4. Ask questions based on the indexed content
+1. Enter your OpenRouter API key in the sidebar.
+2. Upload PDF files or provide website URLs.
+3. Click "Process Documents", "Crawl Website", or "Process Sources" (the button label adapts dynamically).
+4. Wait for the success message confirming the chunks are indexed.
+5. Ask questions! The LLM will respond with professionally formatted answers (bullet points, headings, etc.) based on the detected documentation.
 
 ---
 
