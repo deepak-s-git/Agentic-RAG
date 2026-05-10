@@ -6,7 +6,6 @@ An Agentic Retrieval-Augmented Generation (RAG) system that answers questions us
 
 ## Features
 
-* Premium, minimalist modern UI (ChatGPT-style aesthetic)
 * Clean web scraping and extraction (ignores noisy HTML elements like navs/footers)
 * Optimized semantic chunking strategy explicitly designed for technical documentation
 * Advanced Query Preprocessing (Regex-based formatting strip for pure semantic retrieval)
